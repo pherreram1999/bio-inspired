@@ -24,15 +24,21 @@ pass
 
 def main():
     puntos_inicio = [
+        # propuestas originales
         [-1,-1],
-        [-4, 4]
+        [-4, 4],
+        # puntos adicionales
+        [ 0, 3],
+        [2,3],
+        [0,0],
+        [2,0]
     ]
 
     with ThreadPoolExecutor(max_workers=len(puntos_inicio)) as executor:
         futures = []
         for i, punto in enumerate(puntos_inicio):
             futures.append(
-                executor.submit(process_point, punto, "punto_" + str(i))
+                executor.submit(process_point, punto, "punto_" + str(i + 1))
             )
 
         for f in futures:
