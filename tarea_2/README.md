@@ -1,4 +1,4 @@
-# Tarea 2. Optimización de la función de Rastrigin con algoritmos genéticos
+ # Tarea 2. Optimización de la función de Rastrigin con algoritmos genéticos
 
 ## Problema
 
