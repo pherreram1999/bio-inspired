@@ -4,12 +4,13 @@ from array import ArrayType
 from typing import Protocol, Tuple
 
 import numpy as np
+from printable import readable
 
 
 LIMITE_INFERIOR = -5.12
 LIMITE_SUPERIOR = 5.12
 PRECISION = 5
-NUMERO_POBLACION = 512
+NUMERO_POBLACION = 64
 PROBABILIDAD_CRUZAMIENTO = 0.6
 PROBABILIDAD_MUTACION = 0.2
 
@@ -208,21 +209,46 @@ class GeneticoBasico:
 
 
 
+def ejecutar(pc: float, pm: float, poblacion: int, epochs: int = EPOCHS):
+    """Una ejecución completa del AG. Devuelve (x, y) y f(x, y) de la mejor solución."""
+    funcion = Rastring((LIMITE_INFERIOR, LIMITE_SUPERIOR))
+    bio = GeneticoBasico(funcion, poblacion, PRECISION, pc, pm, epochs)
+    r = bio.run()
+    return r, float(funcion(*r))
+
+
+def indicadores(valores):
+    return {
+        "Mejor": float(np.min(valores)),
+        "Mediana": float(np.median(valores)),
+        "Media": float(np.mean(valores)),
+        "Peor": float(np.max(valores)),
+        "Desv. estandar": float(np.std(valores)),
+    }
+
+
 def main():
-    # generamos una poblacion aleatoria inicial
+    pc, pm, poblacion = .7, .02, 512
+    ejecuciones = 10
 
-    bio = GeneticoBasico(
-        Rastring((LIMITE_INFERIOR, LIMITE_SUPERIOR)),
-        NUMERO_POBLACION,
-        PRECISION,
-        PROBABILIDAD_CRUZAMIENTO,
-        PROBABILIDAD_MUTACION,
-        EPOCHS
-    )
+    filas = []
+    valores = []
+    for n in range(1, ejecuciones + 1):
+        r, f = ejecutar(pc, pm, poblacion)
+        valores.append(f)
+        filas.append({
+            "Ejecución": n,
+            "x": f"{r[0]:.{PRECISION}f}",
+            "y": f"{r[1]:.{PRECISION}f}",
+            "f(x, y)": f"{f:.6e}",
+        })
 
-    print(bio())
-
-
+    print(f"pc={pc} pm={pm} población={poblacion} generaciones={EPOCHS}")
+    print(readable(filas, grid="full"))
+    print(readable(
+        [{"Indicador": k, "Resultado": f"{v:.6e}"} for k, v in indicadores(valores).items()],
+        grid="full",
+    ))
 
 
 if __name__ == '__main__':
