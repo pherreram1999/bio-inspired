@@ -7,7 +7,7 @@ from objective_function import ObjetiveFunction
 
 class GeneticoReal:
 
-    def __init__(self, fo: ObjetiveFunction, n, nc, pc) -> None:
+    def __init__(self, fo: ObjetiveFunction,epochs, n, nc, pc, pm, nm) -> None:
         self._fo = fo
         self._poblacion = None
         self._aptitudes = np.empty(n)
@@ -17,11 +17,17 @@ class GeneticoReal:
         self._n = n
         self._nc = nc
         self._pc = pc
+        self._pm = pm
+        self._nm = nm
+        self._epochs = epochs
+
+        self._best = np.empty(nv)
         pass
 
     def _general_poblacion(self):
         li, ls = self._fo.get_limites()
-        self._poblacion = np.random.uniform(low=li, high=ls, size=(self._n,2))
+        nv = self._fo.get_numero_variables()
+        self._poblacion = np.random.uniform(low=li, high=ls, size=(self._n,nv))
 
     def _seleccion_padres(self):
         # generamos posiciones de lucha para el torneo
@@ -49,19 +55,18 @@ class GeneticoReal:
         i = 0
         while i < self._n:
             rand = random()
-            if self._pc < rand:
+            if rand < self._pc:
+                u = random()
                 for v in range(nv):
                     p1_i = self._poblacion[self._padres[i]][v] # valor del primer padre en la variable v
                     p2_i = self._poblacion[self._padres[i+1]][v] #valor del segundo padre en la variabe v
                     # beta
-                    print()
                     b = 1 + ( (2  / ( p2_i - p1_i )) * np.min( [p1_i - li[v], ls[v] - p2_i] ) )
                     # alpha
                     a = 2 - abs(b) ** -(self._nc + 1)
 
                     a_inverso = 1 / a
 
-                    u = random()
 
                     if u <= a_inverso:
                         bc = (u * a) ** (1 / (self._nc + 1))
@@ -77,12 +82,47 @@ class GeneticoReal:
 
             i = i + 2 # saltamos de 2 en 2 para selecionar 2 padres
 
+    def _mutacion(self):
+        nv = self._fo.get_numero_variables()
+        li, ls = self._fo.get_limites()
+        for i in range(self._n):
+            for j in range(nv):
+                if not random() <= self._pm:
+                    continue
+
+                r = random()
+                hijo = self._hijos[i]
+                d = np.min([ls[j] - hijo[j], hijo[j] - li[j]]) / (ls[j] - li[j])
+
+                if r <= 0.5:
+                    dq = (2*r + (1 - 2*r) * ((1 - d) ** (self._nm + 1))) ** (1 / (self._nm + 1)) - 1
+                else:
+                    dq = 1 - (2*(1 - r) + 2*(r - 0.5) * ((1 - d) ** (self._nm + 1))) ** (1 / (self._nm + 1))
+
+                self._hijos[i][j] = self._hijos[i][j] + dq * (ls[j] - li[j])
+
+    def _elitismo(self):
+        best_i = np.argmin(self._aptitudes)
+        self._best = self._poblacion[best_i].copy()
+
+    def _sutitucion(self):
+        self._poblacion = self._hijos.copy()
+        rand_i = np.random.randint(self._n)
+        self._poblacion[rand_i] = self._best
 
 
     def run(self):
         self._general_poblacion()
         self._evaluar_fo()
-        self._seleccion_padres()
-        self._cruzamiento()
+        for i in range(self._epochs):
+            self._seleccion_padres()
+            self._cruzamiento()
+            self._mutacion()
+            self._elitismo()
+            self._sutitucion()
+            self._evaluar_fo()
+
+        return self._poblacion[np.argmin(self._aptitudes)]
+
 
 
