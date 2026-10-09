@@ -1,7 +1,7 @@
 import numpy as np
 
 from geneticoReal import GeneticoReal
-from graficador import animar_convergencia_estilo_curvas, graficar_convergencia_aptitud
+from graficador import graficar_convergencia_aptitud, animar_convergencia_poblacion
 from langermann import Langermann
 
 
@@ -19,14 +19,18 @@ def main():
     b = GeneticoReal(fo,Epochs,N,Nc,Pc, Pm, Nm)
     best = b.run()
 
-    animar_convergencia_estilo_curvas(
+
+    animar_convergencia_poblacion(
         fo=fo,
+        historial_poblaciones=b.get_historial_poblaciones(),
         historial_best=b.get_historial_best(),
         historial_best_apt=b.get_historial_best_apt(),
-        guardar_como="langermann_estilo.gif",
-        fps=24,
-        interval=250,
-        mostrar_poblacion=False
+        guardar_como="langermann_poblacion.gif",
+        fps=5,
+        interval=220,
+        niveles=12,
+        max_puntos_poblacion=100,
+        alpha_poblacion=0.50
     )
 
     # Gráfica de aptitud

@@ -1,55 +1,83 @@
 import numpy as np
 import matplotlib.pyplot as plt
+
 from matplotlib.animation import FuncAnimation, PillowWriter, FFMpegWriter
 
 
-def animar_convergencia_estilo_curvas(
+def animar_convergencia_poblacion(
     fo,
+    historial_poblaciones,
     historial_best,
     historial_best_apt=None,
-    historial_poblaciones=None,
-    resolucion=250,
-    niveles=18,
-    interval=300,
-    fps=5,
     guardar_como=None,
-    dpi=120,
-    mostrar_poblacion=False,
-    mostrar_labels_contorno=True,
-    mostrar_valor_funcion=True,
-    color_contorno="red",
+    fps=5,
+    interval=220,
+    dpi=140,
+    resolucion=220,
+    niveles=12,
+    mostrar_etiquetas_contorno=False,
+    max_puntos_poblacion=120,
+    alpha_poblacion=0.18,
+    tam_poblacion=14,
+    color_poblacion="gray",
     color_trayectoria="blue",
-    color_poblacion="gray"
+    color_mejor="gold",
+    borde_mejor="black"
 ):
     """
-    Animación estilo curvas de nivel limpias, mostrando la trayectoria
-    del mejor individuo y opcionalmente la población.
+    Anima la convergencia de la población sobre curvas de nivel.
 
     Parámetros
     ----------
     fo : función objetivo de 2 variables
-    historial_best : lista de mejores individuos por generación, shape (2,)
-    historial_best_apt : lista de mejores aptitudes
-    historial_poblaciones : lista de poblaciones por generación (opcional)
-    resolucion : resolución de la malla
-    niveles : número de curvas de nivel
-    interval : ms entre frames
-    fps : fps para guardar
-    guardar_como : archivo de salida (.gif o .mp4)
-    dpi : resolución de guardado
-    mostrar_poblacion : si True, dibuja población actual
-    mostrar_labels_contorno : si True, etiqueta curvas de nivel
-    mostrar_valor_funcion : si True, muestra f(x,y) en el texto
+    historial_poblaciones : list[np.ndarray]
+        Lista de poblaciones por generación. Cada elemento shape (N, 2)
+    historial_best : list[np.ndarray]
+        Lista del mejor individuo por generación. Cada elemento shape (2,)
+    historial_best_apt : list[float], opcional
+        Mejor aptitud por generación
+    guardar_como : str, opcional
+        Ejemplo: "langermann.gif" o "langermann.mp4"
+    fps : int
+    interval : int
+        milisegundos entre cuadros
+    dpi : int
+    resolucion : int
+        resolución de la malla
+    niveles : int
+        número de curvas de nivel
+    mostrar_etiquetas_contorno : bool
+    max_puntos_poblacion : int
+        número máximo de puntos visibles de la población
+    alpha_poblacion : float
+        transparencia de la población
+    tam_poblacion : int
+        tamaño de puntos de población
     """
 
     li, ls = fo.get_limites()
-    li = np.array(li, dtype=float)
-    ls = np.array(ls, dtype=float)
+    li = np.asarray(li, dtype=float)
+    ls = np.asarray(ls, dtype=float)
 
-    if len(li) != 2:
-        raise ValueError("Esta animación solo funciona para funciones de 2 variables.")
+    historial_best = np.asarray(historial_best, dtype=float)
 
-    # Malla
+    if historial_best.ndim != 2 or historial_best.shape[1] != 2:
+        raise ValueError("historial_best debe tener forma (generaciones, 2)")
+
+    if len(historial_poblaciones) != len(historial_best):
+        raise ValueError("historial_poblaciones y historial_best deben tener la misma longitud")
+
+    if historial_best_apt is None:
+        historial_best_apt = [fo(*p) for p in historial_best]
+
+    historial_best_apt = np.asarray(historial_best_apt, dtype=float)
+
+    if len(historial_best_apt) != len(historial_best):
+        raise ValueError("historial_best_apt y historial_best deben tener la misma longitud")
+
+    # ----------------------------
+    # Malla de curvas de nivel
+    # ----------------------------
     x = np.linspace(li[0], ls[0], resolucion)
     y = np.linspace(li[1], ls[1], resolucion)
     X, Y = np.meshgrid(x, y)
@@ -59,12 +87,17 @@ def animar_convergencia_estilo_curvas(
         for j in range(X.shape[1]):
             Z[i, j] = fo(X[i, j], Y[i, j])
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(9, 7))
 
-    # Solo curvas de nivel
-    cs = ax.contour(X, Y, Z, levels=niveles, colors=color_contorno, linewidths=0.8, alpha=0.55)
+    cs = ax.contour(
+        X, Y, Z,
+        levels=niveles,
+        colors="#ef5350",
+        linewidths=0.9,
+        alpha=0.70
+    )
 
-    if mostrar_labels_contorno:
+    if mostrar_etiquetas_contorno:
         ax.clabel(cs, inline=True, fontsize=7, fmt="%.1f")
 
     ax.set_xlim(li[0], ls[0])
@@ -72,96 +105,122 @@ def animar_convergencia_estilo_curvas(
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_title("Convergencia del algoritmo genético")
+    ax.set_aspect("equal", adjustable="box")
 
+    # ----------------------------
+    # Población (tenue)
+    # ----------------------------
+    pob0 = np.asarray(historial_poblaciones[0], dtype=float)
+
+    idx0 = np.linspace(
+        0, len(pob0) - 1,
+        min(max_puntos_poblacion, len(pob0)),
+        dtype=int
+    )
+
+    scatter_pob = ax.scatter(
+        pob0[idx0, 0],
+        pob0[idx0, 1],
+        s=tam_poblacion,
+        c=color_poblacion,
+        alpha=alpha_poblacion,
+        edgecolors="none",
+        label="Población",
+        zorder=2
+    )
+
+    # ----------------------------
     # Trayectoria del mejor
-    linea_best, = ax.plot([], [], "-", color=color_trayectoria, linewidth=1.8, alpha=0.9)
+    # ----------------------------
+    linea_best, = ax.plot(
+        [], [],
+        "-",
+        color=color_trayectoria,
+        linewidth=1.8,
+        alpha=0.9,
+        label="Trayectoria mejor",
+        zorder=4
+    )
 
-    # Punto actual del mejor
-    punto_best, = ax.plot([], [], "o", color=color_trayectoria, markersize=7)
+    # ----------------------------
+    # Mejor individuo actual (estrella)
+    # ----------------------------
+    mejor_star = ax.scatter(
+        [], [],
+        s=180,
+        c=color_mejor,
+        edgecolors=borde_mejor,
+        marker="*",
+        linewidths=1.0,
+        label="Mejor individuo",
+        zorder=5
+    )
 
+    # ----------------------------
     # Texto informativo
+    # ----------------------------
     texto = ax.text(
         0.03, 0.97, "",
         transform=ax.transAxes,
         va="top",
         ha="left",
         fontsize=11,
-        bbox=dict(boxstyle="round", facecolor="white", alpha=0.85, edgecolor="gray")
+        bbox=dict(
+            boxstyle="round",
+            facecolor="white",
+            edgecolor="gray",
+            alpha=0.85
+        )
     )
 
-    # Población opcional
-    if mostrar_poblacion and historial_poblaciones is not None:
-        pob0 = historial_poblaciones[0]
-        scat = ax.scatter(
-            pob0[:, 0],
-            pob0[:, 1],
-            s=18,
-            color=color_poblacion,
-            alpha=0.35
-        )
-    else:
-        scat = None
+    ax.legend(loc="upper right", framealpha=0.9)
 
     def init():
-        if scat is not None:
-            scat.set_offsets(historial_poblaciones[0])
+        p = historial_best[0]
 
-        p0 = np.array(historial_best[0])
-        linea_best.set_data([p0[0]], [p0[1]])
-        punto_best.set_data([p0[0]], [p0[1]])
+        scatter_pob.set_offsets(pob0[idx0])
 
-        if historial_best_apt is not None and mostrar_valor_funcion:
-            texto.set_text(
-                f"Generación: 0\n"
-                f"x = {p0[0]:.4f}\n"
-                f"y = {p0[1]:.4f}\n"
-                f"f(x,y) = {historial_best_apt[0]:.6f}"
-            )
-        else:
-            texto.set_text(
-                f"Generación: 0\n"
-                f"x = {p0[0]:.4f}\n"
-                f"y = {p0[1]:.4f}"
-            )
+        linea_best.set_data([p[0]], [p[1]])
+        mejor_star.set_offsets(np.array([[p[0], p[1]]]))
 
-        artists = [linea_best, punto_best, texto]
-        if scat is not None:
-            artists.append(scat)
-        return tuple(artists)
+        texto.set_text(
+            f"Generación: 0\n"
+            f"x = {p[0]:.5f}\n"
+            f"y = {p[1]:.5f}\n"
+            f"f(x,y) = {historial_best_apt[0]:.6f}"
+        )
+
+        return scatter_pob, linea_best, mejor_star, texto
 
     def update(frame):
-        p = np.array(historial_best[frame])
+        pob = np.asarray(historial_poblaciones[frame], dtype=float)
+        p = historial_best[frame]
+        tray = historial_best[:frame + 1]
 
-        # trayectoria acumulada
-        tray = np.array(historial_best[:frame + 1])
+        idx = np.linspace(
+            0, len(pob) - 1,
+            min(max_puntos_poblacion, len(pob)),
+            dtype=int
+        )
+
+        # población actual
+        scatter_pob.set_offsets(pob[idx])
+
+        # trayectoria acumulada del mejor
         linea_best.set_data(tray[:, 0], tray[:, 1])
 
-        # punto actual
-        punto_best.set_data([p[0]], [p[1]])
+        # mejor actual
+        mejor_star.set_offsets(np.array([[p[0], p[1]]]))
 
-        # población del frame actual
-        if scat is not None:
-            scat.set_offsets(historial_poblaciones[frame])
+        # texto
+        texto.set_text(
+            f"Generación: {frame}\n"
+            f"x = {p[0]:.5f}\n"
+            f"y = {p[1]:.5f}\n"
+            f"f(x,y) = {historial_best_apt[frame]:.6f}"
+        )
 
-        # texto con x, y y f
-        if historial_best_apt is not None and mostrar_valor_funcion:
-            texto.set_text(
-                f"Generación: {frame}\n"
-                f"x = {p[0]:.4f}\n"
-                f"y = {p[1]:.4f}\n"
-                f"f(x,y) = {historial_best_apt[frame]:.6f}"
-            )
-        else:
-            texto.set_text(
-                f"Generación: {frame}\n"
-                f"x = {p[0]:.4f}\n"
-                f"y = {p[1]:.4f}"
-            )
-
-        artists = [linea_best, punto_best, texto]
-        if scat is not None:
-            artists.append(scat)
-        return tuple(artists)
+        return scatter_pob, linea_best, mejor_star, texto
 
     anim = FuncAnimation(
         fig,
@@ -185,14 +244,11 @@ def animar_convergencia_estilo_curvas(
             print(f"Video guardado en: {guardar_como}")
 
         else:
-            raise ValueError("Solo se soporta .gif o .mp4")
+            raise ValueError("Formato no soportado. Usa .gif o .mp4")
 
     plt.show()
     return anim
 
-
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 def graficar_convergencia_aptitud(
