@@ -7,6 +7,15 @@ from objective_function import ObjetiveFunction
 
 class GeneticoReal:
 
+    def get_historial_poblaciones(self):
+        return self._historial_poblaciones
+
+    def get_historial_best(self):
+        return self._historial_best
+
+    def get_historial_best_apt(self):
+        return self._historial_best_apt
+
     def __init__(self, fo: ObjetiveFunction,epochs, n, nc, pc, pm, nm) -> None:
         self._fo = fo
         self._poblacion = None
@@ -20,6 +29,12 @@ class GeneticoReal:
         self._pm = pm
         self._nm = nm
         self._epochs = epochs
+
+        # para guardar historico para graficarlo
+        self._historial_poblaciones = []
+        self._historial_best = []
+        self._historial_best_apt = []
+
 
         self._best = np.empty(nv)
         pass
@@ -60,8 +75,11 @@ class GeneticoReal:
                 for v in range(nv):
                     p1_i = self._poblacion[self._padres[i]][v] # valor del primer padre en la variable v
                     p2_i = self._poblacion[self._padres[i+1]][v] #valor del segundo padre en la variabe v
-                    # beta
-                    b = 1 + ( (2  / ( p2_i - p1_i )) * np.min( [p1_i - li[v], ls[v] - p2_i] ) )
+
+                    # Ordenar los valores de los padres
+                    p1_i, p2_i = min(p1_i, p2_i), max(p1_i, p2_i)
+                    # beta TODO coregir el min
+                    b = 1 + ( (2  / ( np.max([p2_i - p1_i,0.1e-16]) )) * np.min( [p1_i - li[v], ls[v] - p2_i] ) )
                     # alpha
                     a = 2 - abs(b) ** -(self._nc + 1)
 
@@ -110,17 +128,32 @@ class GeneticoReal:
         rand_i = np.random.randint(self._n)
         self._poblacion[rand_i] = self._best
 
+    def _registrar_historial(self):
+        """
+        Registra un historico para el graficado
+        :return:
+        """
+        best_i = np.argmin(self._aptitudes)
+        self._historial_poblaciones.append(self._poblacion.copy())
+        self._historial_best.append(self._poblacion[best_i].copy())
+        self._historial_best_apt.append(self._aptitudes[best_i])
+
 
     def run(self):
         self._general_poblacion()
         self._evaluar_fo()
+
+        self._registrar_historial() # registramos la poblacion inicial
+
         for i in range(self._epochs):
+            self._elitismo()
             self._seleccion_padres()
             self._cruzamiento()
             self._mutacion()
-            self._elitismo()
             self._sutitucion()
             self._evaluar_fo()
+
+            self._registrar_historial()
 
         return self._poblacion[np.argmin(self._aptitudes)]
 
