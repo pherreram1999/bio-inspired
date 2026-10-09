@@ -5,6 +5,9 @@ from objective_function import ObjetiveFunction
 
 class Langermann(ObjetiveFunction):
 
+    def get_name(self) -> str:
+        return "Langermann"
+
     def get_limites(self):
         return (
             (0,0), # limites inferiores

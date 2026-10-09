@@ -1,0 +1,23 @@
+# Generated results
+/result/
+/results/
+/resultados/
+/output/
+/outputs/
+
+# Generated images and animations
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.tif
+*.tiff
+*.svg
+
+# Local development files
+.idea/
+.venv/
+__pycache__/
+*.py[cod]
