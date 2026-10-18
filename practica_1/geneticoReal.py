@@ -16,6 +16,9 @@ class GeneticoReal:
     def get_historial_best_apt(self):
         return self._historial_best_apt
 
+    def get_mejor_individuo(self):
+        return self._best
+
     def __init__(self, fo: ObjetiveFunction,epochs, n, nc, pc, pm, nm) -> None:
         self._fo = fo
         self._poblacion = None
@@ -143,7 +146,7 @@ class GeneticoReal:
         self._general_poblacion()
         self._evaluar_fo()
 
-        self._registrar_historial() # registramos la poblacion inicial
+        self._registrar_historial() # registramos de la poblacion inicial
 
         for i in range(self._epochs):
             self._elitismo()

@@ -15,12 +15,20 @@ class ObjetiveFunction(Protocol):
 
     def get_name(self) -> str: ...
 
+    def get_limites(self): ...
 
 
 class Sigmoide(ObjetiveFunction):
 
-    def __init__(self, measure: ContrastMeasure):
+    def __init__(self, img,measure: ContrastMeasure):
+        self._img = img
         self._measure = measure
+
+    def get_limites(self):
+        return (
+            (0, 0),  # límites inferiores: alpha, delta
+            (10, 1),  # límites superiores: alpha, delta
+        )
 
     def get_numero_variables(self) -> int:
         return 2 # que son alpha y delta
@@ -28,9 +36,12 @@ class Sigmoide(ObjetiveFunction):
     def get_name(self) -> str:
         return "Sigmoide"
 
+    def transformar(self,alpha,delta):
+        return 1.0 / (1.0 + np.exp(-alpha * (self._img - delta)))
+
     def __call__(self, *variables):
-        img, alpha, delta = variables
-        return - self._measure(1.0 / (1.0 + np.exp(-alpha * (img - delta))))
+        alpha, delta = variables
+        return - self._measure(self.transformar(alpha,delta))
 
 
 

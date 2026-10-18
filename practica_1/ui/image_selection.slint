@@ -1,0 +1,137 @@
+import { Button, ComboBox, HorizontalBox, LineEdit, VerticalBox } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "Medición de contraste";
+    preferred-width: 900px;
+    preferred-height: 760px;
+    min-width: 720px;
+    min-height: 650px;
+    background: #f3f5f9;
+
+    in-out property<string> path: "";
+    in-out property<string> measure: "Entropía de Shannon";
+    in-out property<image> preview;
+    in-out property<bool> ready: false;
+    in-out property<string> status: "Selecciona una imagen para comenzar.";
+
+    callback browse();
+    callback load(string);
+    callback edited(string);
+    callback proceed(string, string);
+
+    VerticalBox {
+        padding: 28px;
+        spacing: 16px;
+
+        Text {
+            text: "Medición de contraste";
+            font-size: 30px;
+            font-weight: 700;
+            color: #182230;
+        }
+
+        Text {
+            text: "Selecciona una imagen y elige cómo medir su contraste.";
+            font-size: 15px;
+            color: #667085;
+        }
+
+        VerticalBox {
+            spacing: 8px;
+
+            Text {
+                text: "Ruta de la imagen";
+                font-size: 14px;
+                font-weight: 600;
+                color: #344054;
+            }
+
+            HorizontalBox {
+                spacing: 10px;
+
+                LineEdit {
+                    text <=> root.path;
+                    placeholder-text: "Escribe o pega la ruta de una imagen";
+                    horizontal-stretch: 1;
+                    edited(text) => { root.edited(text); }
+                    accepted(text) => { root.load(text); }
+                }
+
+                Button {
+                    text: "Examinar...";
+                    clicked => { root.browse(); }
+                }
+            }
+        }
+
+        Text {
+            text: "Vista previa";
+            font-size: 14px;
+            font-weight: 600;
+            color: #344054;
+        }
+
+        Rectangle {
+            height: 350px;
+            background: #e9edf4;
+            border-color: #d8dee9;
+            border-width: 1px;
+            border-radius: 12px;
+            clip: true;
+
+            if root.ready: Image {
+                source: root.preview;
+                image-fit: contain;
+                x: 16px;
+                y: 16px;
+                width: parent.width - 32px;
+                height: parent.height - 32px;
+            }
+
+            if !root.ready: Text {
+                text: "La imagen seleccionada aparecerá aquí";
+                color: #667085;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                x: 20px;
+                y: 20px;
+                width: parent.width - 40px;
+                height: parent.height - 40px;
+            }
+        }
+
+        HorizontalBox {
+            spacing: 18px;
+
+            VerticalBox {
+                spacing: 8px;
+                horizontal-stretch: 1;
+
+                Text {
+                    text: "Medición de contraste";
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #344054;
+                }
+
+                ComboBox {
+                    model: ["Entropía de Shannon", "Sobel"];
+                    current-value <=> root.measure;
+                }
+            }
+
+            Button {
+                text: "Proceder";
+                primary: true;
+                enabled: root.ready;
+                clicked => { root.proceed(root.path, root.measure); }
+            }
+        }
+
+        Text {
+            text: root.status;
+            font-size: 13px;
+            color: root.ready ? #16803c : #667085;
+        }
+    }
+}
