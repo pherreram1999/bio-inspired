@@ -54,6 +54,49 @@ def main(page: ft.Page):
         read_only=True,
         expand=True,
     )
+    alpha_value = ft.Text("—", size=20, weight=ft.FontWeight.BOLD)
+    delta_value = ft.Text("—", size=20, weight=ft.FontWeight.BOLD)
+    result_parameters = ft.Card(
+        visible=False,
+        content=ft.Container(
+            padding=16,
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        "Parámetros óptimos",
+                        size=16,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.ResponsiveRow(
+                        controls=[
+                            ft.Container(
+                                col={"xs": 12, "sm": 6},
+                                content=ft.Column(
+                                    controls=[
+                                        ft.Text("Alpha", color="#475467"),
+                                        alpha_value,
+                                    ],
+                                    spacing=2,
+                                ),
+                            ),
+                            ft.Container(
+                                col={"xs": 12, "sm": 6},
+                                content=ft.Column(
+                                    controls=[
+                                        ft.Text("Delta", color="#475467"),
+                                        delta_value,
+                                    ],
+                                    spacing=2,
+                                ),
+                            ),
+                        ],
+                        spacing=12,
+                    ),
+                ],
+                spacing=8,
+            ),
+        ),
+    )
     method_selector = ft.Dropdown(
         label="Método de medición",
         value="entropia",
@@ -200,6 +243,9 @@ def main(page: ft.Page):
         result_image.visible = False
         result_placeholder.visible = True
         result_path.value = ""
+        alpha_value.value = "—"
+        delta_value.value = "—"
+        result_parameters.visible = False
         set_status("Imagen cargada. Elige la carpeta de salida.", "info")
 
     async def select_output_directory(_):
@@ -271,16 +317,24 @@ def main(page: ft.Page):
         set_status("Procesando imagen. Esto puede tardar unos momentos...", "working")
         page.update()
         try:
-            improved_image_path = await asyncio.to_thread(
+            result = await asyncio.to_thread(
                 run_measurement,
                 image_path,
                 method_selector.value,
                 algorithm_parameters,
                 destination,
             )
+            if not isinstance(result, dict):
+                set_status(
+                    "main debe devolver un diccionario con path, alpha y delta.",
+                    "warning",
+                )
+                return
+
+            improved_image_path = result.get("path")
             if not improved_image_path:
                 set_status(
-                    "El proceso terminó, pero main no devolvió la ruta de la imagen mejorada.",
+                    "main devolvió un resultado sin la ruta de la imagen mejorada.",
                     "warning",
                 )
                 return
@@ -294,6 +348,9 @@ def main(page: ft.Page):
             result_image.visible = True
             result_placeholder.visible = False
             result_path.value = improved_image_path
+            alpha_value.value = str(result.get("alpha", "—"))
+            delta_value.value = str(result.get("delta", "—"))
+            result_parameters.visible = True
             set_status(
                 f"Proceso terminado. Imagen mejorada guardada en: {improved_image_path}",
                 "success",
@@ -431,6 +488,7 @@ def main(page: ft.Page):
                             spacing=12,
                             run_spacing=4,
                         ),
+                        result_parameters,
                         result_path,
                     ],
                     spacing=12,

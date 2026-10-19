@@ -1,3 +1,4 @@
+import csv
 import time
 from pathlib import Path
 
@@ -23,7 +24,7 @@ def main(
     measurement_method: str,
     parametros: dict[str, int | float],
     output: str,
-) -> str:
+):
     try:
         print("iniciamos transformacion de imagen")
         img = open_image(image_path)
@@ -60,12 +61,26 @@ def main(
 
         output_path = Path(output)
         output_path.mkdir(parents=True, exist_ok=True)
+        # aqui usa un metodo magico para sobre escribir el comportamiento de la division como union de paths
         img_mejorada_path = output_path / f"imagen_mejorada_{timestamp}.png"
 
         if not cv2.imwrite(str(img_mejorada_path), img_tosave):
             raise OSError(f"No se pudo guardar la imagen en {img_mejorada_path}")
 
-        return str(img_mejorada_path)
+        # registramos en disco las mejoras
+
+        with open(output_path / "resultados.txt", "a", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([timestamp,mejor_alpha, mejor_delta])
+
+
+        print("Ha terminado")
+
+        return {
+            "path": str(img_mejorada_path),
+            "alpha": str(mejor_alpha),
+            "delta": str(mejor_delta),
+        }
 
     except Exception as e:
         print(e)
