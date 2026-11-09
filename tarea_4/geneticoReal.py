@@ -1,8 +1,11 @@
 from random import random
+from typing import List
 
+from Restrictions import RestrictionDefinition
 import numpy as np
 
-from objective_function import ObjetiveFunction
+
+from FunctionDefinition import FunctionDefinition
 
 
 class GeneticoReal:
@@ -16,7 +19,7 @@ class GeneticoReal:
     def get_historial_best_apt(self):
         return self._historial_best_apt
 
-    def __init__(self, fo: ObjetiveFunction,epochs, n, nc, pc, pm, nm) -> None:
+    def __init__(self, fo: FunctionDefinition, epochs, n, nc, pc, pm, nm, cp, restrictions: List[RestrictionDefinition]) -> None:
         self._fo = fo
         self._poblacion = None
         self._aptitudes = np.empty(n)
@@ -28,12 +31,15 @@ class GeneticoReal:
         self._pc = pc
         self._pm = pm
         self._nm = nm
+        self._cp = cp # coeficiente de penelizacion (lamda)
         self._epochs = epochs
 
         # para guardar historico para graficarlo
         self._historial_poblaciones = []
         self._historial_best = []
         self._historial_best_apt = []
+
+        self._restrictions = restrictions
 
 
         self._best = np.empty(nv)
@@ -60,8 +66,23 @@ class GeneticoReal:
                 self._padres[i] = p2i
 
     def _evaluar_fo(self):
+        """
+
+        :return:
+        """
         for i in range(self._n):
-            self._aptitudes[i] = self._fo(*self._poblacion[i])
+            # la aptidud original
+            fx = self._fo(*self._poblacion[i])
+            # evaluamos las resitrcciones
+            px = 0 # el valor acumulado de
+            # En este caso son todas menores o iguales,
+            for r in self._restrictions:
+                px = px + (np.max([r(*self._poblacion[i]),0]))
+            # valor penalizado
+            fp = fx + (self._cp * px)
+            self._aptitudes[i] = fp
+
+
 
     def _cruzamiento(self):
         nv = self._fo.get_numero_variables()
@@ -84,7 +105,6 @@ class GeneticoReal:
                     a = 2 - abs(b) ** -(self._nc + 1)
 
                     a_inverso = 1 / a
-
 
                     if u <= a_inverso:
                         bc = (u * a) ** (1 / (self._nc + 1))

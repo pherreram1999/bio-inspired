@@ -2,7 +2,7 @@ from ast import Tuple
 from typing import Protocol
 
 
-class ObjetiveFunction(Protocol):
+class FunctionDefinition(Protocol):
     def __call__(self, *variables) -> float: ...
 
     def get_limites(self)-> Tuple: ...
@@ -10,3 +10,5 @@ class ObjetiveFunction(Protocol):
     def get_numero_variables(self) -> int: ...
 
     def get_name(self) -> str: ...
+
+
